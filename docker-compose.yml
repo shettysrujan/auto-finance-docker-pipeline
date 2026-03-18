@@ -1,23 +1,54 @@
-version: "3"
-
 services:
-  airflow:
+
+  postgres:
+    image: postgres:13
+    container_name: airflow-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres-db-volume:/var/lib/postgresql/data
+    restart: always
+
+  airflow-init:
     build:
       context: .
       dockerfile: docker/Dockerfile.airflow
-    container_name: airflow
-    restart: always
-    environment:
-      - AIRFLOW__CORE__LOAD_EXAMPLES=False
-      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
+    depends_on:
+      - postgres
+    env_file:
+      - .env
+    entrypoint: /bin/bash
+    command: >
+      -c "
+      airflow db init &&
+      airflow users create
+      --username ${AIRFLOW_ADMIN_USER}
+      --password ${AIRFLOW_ADMIN_PASSWORD}
+      --firstname admin
+      --lastname user
+      --role Admin
+      --email admin@example.com
+      "
+
+  airflow-webserver:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.airflow
+    container_name: airflow-webserver
+    depends_on:
+      - postgres
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    command: webserver
     volumes:
       - ./dags:/opt/airflow/dags
       - ./spark_jobs:/opt/airflow/spark_jobs
       - ./data:/opt/airflow/data
-      - ./output:/opt/airflow/output
-    ports:
-      - "8080:8080"
-    command: webserver
+    restart: always
 
   airflow-scheduler:
     build:
@@ -25,10 +56,15 @@ services:
       dockerfile: docker/Dockerfile.airflow
     container_name: airflow-scheduler
     depends_on:
-      - airflow
+      - postgres
+    env_file:
+      - .env
+    command: scheduler
     volumes:
       - ./dags:/opt/airflow/dags
       - ./spark_jobs:/opt/airflow/spark_jobs
       - ./data:/opt/airflow/data
-      - ./output:/opt/airflow/output
-    command: scheduler
+    restart: always
+
+volumes:
+  postgres-db-volume:
