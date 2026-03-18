@@ -12,6 +12,8 @@ services:
     restart: always
 
   airflow-init:
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@airflow-postgres:5432/${POSTGRES_DB}
     build:
       context: .
       dockerfile: docker/Dockerfile.airflow
@@ -33,6 +35,8 @@ services:
       "
 
   airflow-webserver:
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@airflow-postgres:5432/${POSTGRES_DB}
     build:
       context: .
       dockerfile: docker/Dockerfile.airflow
@@ -51,6 +55,8 @@ services:
     restart: always
 
   airflow-scheduler:
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@airflow-postgres:5432/${POSTGRES_DB}
     build:
       context: .
       dockerfile: docker/Dockerfile.airflow
